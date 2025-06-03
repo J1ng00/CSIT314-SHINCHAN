@@ -1,0 +1,63 @@
+name: CI - React + Spring Boot with Docker Services and Logs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📦 Checkout code
+      uses: actions/checkout@v3
+
+    - name: 🐳 Set up Docker
+      run: docker -v
+
+    - name: 🛠️ Start services with Docker Compose
+      run: |
+        docker-compose up -d
+        echo "🕒 Waiting for PostgreSQL and MinIO to start..."
+
+        echo "⏳ Checking PostgreSQL..."
+        for i in {1..20}; do
+          docker logs postgres 2>&1 | tee -a postgres.log
+          nc -z localhost 5432 && echo "✅ PostgreSQL is ready" && break
+          sleep 2
+        done
+
+        echo "⏳ Checking MinIO..."
+        for i in {1..20}; do
+          docker logs minio 2>&1 | tee -a minio.log
+          curl -s http://localhost:9000/minio/health/ready && echo "✅ MinIO is ready" && break
+          sleep 2
+        done
+
+    - name: 📜 Show Docker logs on failure
+      if: failure()
+      run: docker-compose logs
+
+    - name: ☕ Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: ⚙️ Build and Test Spring Boot Backend
+      run: |
+        cd backend/backend
+        ./mvnw clean verify
+
+    - name: 🌐 Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 📦 Install & Build React Frontend
+      run: |
+        cd react-frontend
+        npm install
+        npm run build

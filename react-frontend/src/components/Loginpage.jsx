@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';  
+import { Link, useNavigate } from 'react-router-dom';  
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -10,32 +10,56 @@ const LoginPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  const navigate = useNavigate();
 
-    try {
-      const response = await fetch('http://localhost:8080/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setSuccess('');
 
-      if (response.ok) {
+  try {
+    const response = await fetch('http://localhost:8080/api/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    const contentType = response.headers.get('content-type');
+
+    if (response.ok) {
+      // Ensure response is JSON
+      if (contentType && contentType.includes('application/json')) {
+        const user = await response.json();
+
+        console.log("✅ User login response:", user.email); // confirm this has `.email`
+        localStorage.setItem("email", user.email);
         setSuccess('Login successful!');
-        // Optionally store token / navigate
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Login failed');
-      }
-    } catch (err) {
-      setError('An error occurred while logging in');
-    }
-  };
 
+        if (user.role === 'User') {
+          navigate('/user');
+        } else if (user.role === 'Event Organizer') {
+          navigate('/organizer');
+        } else if (user.role === "ADMIN"){
+          navigate("/admin-dashboard");
+        } else {
+          setError('Unknown role');
+        }
+
+        return; // ✅ prevent falling into catch
+      } else {
+        setError('Unexpected response format');
+        return;
+      }
+    } else {
+      // Even on error, try to parse JSON body
+      const errorData = await response.json();
+      setError(errorData.message || 'Login failed');
+    }
+  } catch (err) {
+    console.error('⚠️ Login error:', err);
+    setError('An error occurred while logging in');
+  }
+};
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-pink-100 px-4 py-12">
