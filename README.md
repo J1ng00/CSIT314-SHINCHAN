@@ -10,3 +10,5 @@ Database: PostgreSQL (runned on docker)
 System Requirements:
 - Node.js
 - 
+
+dotenv ./mvnw spring-boot:run
