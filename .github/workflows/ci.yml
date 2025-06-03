@@ -29,26 +29,26 @@ jobs:
 
     - name: 🛠️ Start services with Docker Compose
       run: |
-        docker-compose up -d
+        docker compose up -d
         echo "🕒 Waiting for PostgreSQL and MinIO to start..."
-
+        
         echo "⏳ Checking PostgreSQL..."
         for i in {1..20}; do
-          docker logs postgres 2>&1 | tee -a postgres.log
+          docker compose logs postgres 2>&1 | tee -a postgres.log
           nc -z localhost 5432 && echo "✅ PostgreSQL is ready" && break
           sleep 2
         done
-
+        
         echo "⏳ Checking MinIO..."
         for i in {1..20}; do
-          docker logs minio 2>&1 | tee -a minio.log
+          docker compose logs minio 2>&1 | tee -a minio.log
           curl -s http://localhost:9000/minio/health/ready && echo "✅ MinIO is ready" && break
           sleep 2
         done
-
+        
     - name: 📜 Show Docker logs on failure
       if: failure()
-      run: docker-compose logs
+      run: docker compose logs
 
     - name: ☕ Set up JDK 17
       uses: actions/setup-java@v3
